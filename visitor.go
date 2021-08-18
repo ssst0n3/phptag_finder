@@ -33,11 +33,6 @@ func (v *PhpTagFinder) EnterNode(w walker.Walkable) bool {
 				tag := NewTag(position.NewPosition(1, fsPos.StartLine, 0, fsPos.StartPos))
 				v.Tags = append(v.Tags, tag)
 			}
-
-			lastStmt := typedNode.Stmts[len(typedNode.Stmts)-1]
-			if _, is := lastStmt.(*stmt.InlineHtml); is {
-				return true
-			}
 		}
 	case *stmt.InlineHtml:
 		log.Logger.Debug("html")
@@ -59,7 +54,19 @@ func (v *PhpTagFinder) EnterNode(w walker.Walkable) bool {
 }
 
 func (v *PhpTagFinder) LeaveNode(w walker.Walkable) {
-
+	n := w.(node.Node)
+	switch typedNode := n.(type) {
+	case *node.Root:
+		log.Logger.Debug("root")
+		if len(typedNode.Stmts) > 0 {
+			lastStmt := typedNode.Stmts[len(typedNode.Stmts)-1]
+			if _, is := lastStmt.(*stmt.InlineHtml); is {
+				if len(v.Tags) > 0 {
+					v.Tags = v.Tags[:len(v.Tags)-1]
+				}
+			}
+		}
+	}
 }
 
 func (v *PhpTagFinder) EnterChildNode(key string, w walker.Walkable) {
